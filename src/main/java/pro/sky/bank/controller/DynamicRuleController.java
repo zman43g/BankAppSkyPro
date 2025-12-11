@@ -1,5 +1,6 @@
 package pro.sky.bank.controller;
 
+import pro.sky.bank.exception.RuleNotFoundException;
 import pro.sky.bank.model.dto.DynamicRuleRequest;
 import pro.sky.bank.model.dto.DynamicRuleResponse;
 import pro.sky.bank.model.dto.RulesListResponse;
@@ -10,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
+
 
 @RestController
 @RequestMapping("/rule")
@@ -20,9 +21,9 @@ public class DynamicRuleController {
     private final DynamicRuleService dynamicRuleService;
 
     @PostMapping
-    public ResponseEntity<DynamicRuleResponse> createRule(@RequestBody DynamicRuleRequest request) {
-        DynamicRuleResponse response = dynamicRuleService.createRule(request);
-        return ResponseEntity.ok(response);
+    @ResponseStatus(HttpStatus.CREATED)
+    public DynamicRuleResponse createRule(@RequestBody DynamicRuleRequest request) {
+        return dynamicRuleService.createRule(request);
     }
 
     @GetMapping
@@ -34,19 +35,11 @@ public class DynamicRuleController {
     }
 
     @DeleteMapping("/{productId}")
-    public ResponseEntity<Void> deleteRule(@PathVariable String productId) {
-        if (!dynamicRuleService.ruleExists(productId)) {
-            return ResponseEntity.notFound().build();
-        }
-
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteRule(@PathVariable String productId) {
         dynamicRuleService.deleteRule(productId);
-        return ResponseEntity.noContent().build();
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(e.getMessage());
-    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleException(Exception e) {

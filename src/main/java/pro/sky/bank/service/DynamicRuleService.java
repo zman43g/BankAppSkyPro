@@ -3,6 +3,8 @@ package pro.sky.bank.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import pro.sky.bank.exception.RuleNotFoundException;
+import pro.sky.bank.exception.RuleValidationException;
 import pro.sky.bank.model.dto.DynamicRuleRequest;
 import pro.sky.bank.model.dto.DynamicRuleResponse;
 import pro.sky.bank.model.dto.RuleQuery;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,10 +63,35 @@ public class DynamicRuleService {
     }
 
     @Transactional
-    public void deleteRule(String productId) { // Изменили с UUID на String
-        dynamicRuleRepository.deleteByProductId(productId);
-        System.out.println("Deleted dynamic rule for productId: " + productId);
+    public void deleteRule(String productId) {
+        validateProductId(productId);
+        DynamicRule rule = findRuleByProductIdOrThrow(productId);
+        deleteRuleAndQueries(rule);
+
     }
+
+    private void deleteRuleAndQueries(DynamicRule rule) {
+        ruleQueryRepository.deleteByRule(rule);
+        dynamicRuleRepository.delete(rule);
+    }
+    private void validateProductId(String productId) {
+        if (productId == null || productId.trim().isEmpty()) {
+            throw new RuleValidationException("Product ID cannot be null or empty");
+        }
+
+        try {
+            UUID.fromString(productId);
+        } catch (IllegalArgumentException e) {
+            throw new RuleValidationException("Product ID must be a valid UUID: " + productId);
+        }
+    }
+
+    private DynamicRule findRuleByProductIdOrThrow(String productId) {
+        return dynamicRuleRepository.findByProductId(productId)
+                .orElseThrow(() -> new RuleNotFoundException(
+                        "Rule not found for productId: " + productId));
+    }
+
 
     @Transactional(readOnly = true)
     public boolean ruleExists(String productId) { // Изменили с UUID на String
