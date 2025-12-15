@@ -83,7 +83,7 @@ public class DatabaseChecker {
         for (String userId : testUserIds) {
             try {
                 Boolean exists = jdbcTemplate.queryForObject(
-                        "SELECT COUNT(*) > 0 FROM users WHERE id = ?",
+                        "SELECT COUNT(*) > 0 FROM USERS WHERE id = ?",
                         Boolean.class,
                         userId
                 );
