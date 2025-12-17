@@ -27,22 +27,19 @@ public class DynamicRuleService {
     private final DynamicRuleRepository dynamicRuleRepository;
     private final RuleQueryRepository ruleQueryRepository;
     private final ObjectMapper objectMapper;
+    private final RuleStatisticService statisticService;
 
     @Transactional
     public DynamicRuleResponse createRule(DynamicRuleRequest request) {
-        // Проверяем валидность запроса
         validateRuleRequest(request);
 
-        // Создаем сущность правила
         DynamicRule rule = new DynamicRule();
         rule.setProductName(request.getProductName());
         rule.setProductId(request.getProductId());
         rule.setProductText(request.getProductText());
 
-        // Сохраняем правило
         DynamicRule savedRule = dynamicRuleRepository.save(rule);
 
-        // Создаем и сохраняем запросы
         List<RuleQueryEntity> queryEntities = request.getRule().stream()
                 .map(query -> createQueryEntity(savedRule, query))
                 .collect(Collectors.toList());
@@ -50,9 +47,24 @@ public class DynamicRuleService {
         ruleQueryRepository.saveAll(queryEntities);
         savedRule.setQueries(queryEntities);
 
+        // Инициализируем статистику для нового правила
+        statisticService.incrementTrigger(savedRule.getProductId(), savedRule.getProductName());
+
         System.out.println("Created dynamic rule for product: " + request.getProductName());
 
         return convertToResponse(savedRule);
+    }
+
+    @Transactional
+    public void deleteRule(String productId) {
+        validateProductId(productId);
+        DynamicRule rule = findRuleByProductIdOrThrow(productId);
+
+        // Деактивируем статистику перед удалением правила
+        statisticService.deactivateStatistic(productId);
+
+        // Удаляем запросы и правило
+        deleteRuleAndQueries(rule);
     }
 
     @Transactional(readOnly = true)
@@ -62,18 +74,11 @@ public class DynamicRuleService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public void deleteRule(String productId) {
-        validateProductId(productId);
-        DynamicRule rule = findRuleByProductIdOrThrow(productId);
-        deleteRuleAndQueries(rule);
-
-    }
-
     private void deleteRuleAndQueries(DynamicRule rule) {
         ruleQueryRepository.deleteByRule(rule);
         dynamicRuleRepository.delete(rule);
     }
+
     private void validateProductId(String productId) {
         if (productId == null || productId.trim().isEmpty()) {
             throw new RuleValidationException("Product ID cannot be null or empty");
@@ -136,7 +141,8 @@ public class DynamicRuleService {
         try {
             List<String> arguments = objectMapper.readValue(
                     entity.getArguments(),
-                    new TypeReference<List<String>>() {}
+                    new TypeReference<List<String>>() {
+                    }
             );
             query.setArguments(arguments);
         } catch (JsonProcessingException e) {

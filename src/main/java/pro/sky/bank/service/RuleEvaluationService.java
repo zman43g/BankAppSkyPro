@@ -1,10 +1,12 @@
 package pro.sky.bank.service;
 
 import pro.sky.bank.model.dto.RuleQuery;
+import pro.sky.bank.model.dto.DynamicRuleResponse;
 import pro.sky.bank.repository.RecommendationsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -15,7 +17,10 @@ import java.util.UUID;
 public class RuleEvaluationService {
 
     private final RecommendationsRepository repository;
+    private final RuleStatisticService statisticService;
+    private final DynamicRuleService dynamicRuleService;
 
+    @Transactional
     public boolean evaluateQuery(UUID userId, RuleQuery ruleQuery) {
 
         try {
@@ -26,12 +31,34 @@ public class RuleEvaluationService {
                 result = !result;
             }
 
-            System.out.println("Query evaluated: userId=" + userId + ", query=" + ruleQuery.getQuery() + ", result=" + result);
+            // СОБИРАЕМ СТАТИСТИКУ
+            collectStatistics(ruleQuery, result);
+
+            log.info("Query evaluated: userId={}, query={}, result={}", userId, ruleQuery.getQuery(), result);
             return result;
 
         } catch (Exception e) {
-            System.err.println("Error evaluating query: " + e.getMessage());
+            log.error("Error evaluating query: {}", e.getMessage(), e);
             return false;
+        }
+    }
+
+
+    private void collectStatistics(RuleQuery ruleQuery, boolean evaluationResult) {
+        try {
+            Long ruleId = ruleQuery.getRuleId();
+            String productId = ruleQuery.getProductId();
+            String productName = ruleQuery.getProductName();
+
+            if (productId != null && productName != null) {
+                // Увеличиваем счетчик срабатываний
+                statisticService.incrementTrigger(productId, productName);
+
+                log.debug("Statistics collected for rule: {}, productId: {}, result: {}",
+                        ruleId, productId, evaluationResult);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to collect statistics: {}", e.getMessage());
         }
     }
 
@@ -103,6 +130,65 @@ public class RuleEvaluationService {
                 return value1.compareTo(value2) <= 0;
             default:
                 throw new IllegalArgumentException("Unknown operator: " + operator);
+        }
+    }
+
+       @Transactional
+    public boolean evaluateFullRule(UUID userId, DynamicRuleResponse rule) {
+        try {
+            boolean finalResult = true; // Начальное значение для AND логики
+
+            if (rule.getRule() != null && !rule.getRule().isEmpty()) {
+                for (RuleQuery query : rule.getRule()) {
+                    // Устанавливаем ruleId для каждого запроса
+                    query.setRuleId(rule.getId());
+
+                    boolean queryResult = evaluateQuery(userId, query);
+
+                    // Предполагаем AND логику между запросами
+                    finalResult = finalResult && queryResult;
+
+                    // Если уже false, можно прервать выполнение
+                    if (!finalResult) {
+                        break;
+                    }
+                }
+            }
+
+            // Собираем финальную статистику для всего правила
+            statisticService.incrementTrigger(rule.getProductId(), rule.getProductName());
+
+            log.info("Full rule evaluated: ruleId={}, productId={}, result={}",
+                    rule.getId(), rule.getProductId(), finalResult);
+
+            return finalResult;
+
+        } catch (Exception e) {
+            log.error("Error evaluating full rule: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+
+    @Transactional
+    public java.util.List<DynamicRuleResponse> evaluateRulesForUser(UUID userId) {
+        try {
+            // Получаем все правила
+            var allRules = dynamicRuleService.getAllRules();
+
+            // Оцениваем каждое правило
+            var applicableRules = allRules.stream()
+                    .filter(rule -> evaluateFullRule(userId, rule))
+                    .toList();
+
+            log.info("Rules evaluated for user: userId={}, totalRules={}, applicableRules={}",
+                    userId, allRules.size(), applicableRules.size());
+
+            return applicableRules;
+
+        } catch (Exception e) {
+            log.error("Error evaluating rules for user: {}", e.getMessage(), e);
+            return java.util.Collections.emptyList();
         }
     }
 }

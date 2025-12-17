@@ -9,14 +9,9 @@ public class HelpHandler {
 
     public void sendHelpMessage(Long chatId, TelegramLongPollingBot bot) {
         String help = """
-                 **Доступные команды:**
-                
-                • /start, /help - эта справка
-                • /recommendations - инвестиционные рекомендации
-                • /rules - список правил
-                • /stats - статистика срабатываний правил
-                • /system - информация о системе
-                """;
+            **Единственная команда:**
+                `/recommend username`
+           """;
 
         send(chatId, help, bot);
     }

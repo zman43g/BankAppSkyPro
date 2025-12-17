@@ -11,6 +11,9 @@ public class RuleQuery {
     private String query;
     private List<String> arguments;
     private Boolean negate;
+    private Long ruleId;
+    private String productId;
+    private String productName;
 
     public enum QueryType {
         USER_OF,
@@ -68,5 +71,28 @@ public class RuleQuery {
 
     public Boolean getNegate() {
         return negate;
+    }
+    public Long getRuleId() {
+        return ruleId;
+    }
+
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setRuleId(Long ruleId) {
+        this.ruleId = ruleId;
     }
 }
