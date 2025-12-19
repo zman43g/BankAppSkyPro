@@ -13,11 +13,13 @@ public class RulesListResponse {
     }
 
     public RulesListResponse() {
-
     }
-
 
     public void setData(List<DynamicRuleResponse> data) {
         this.data = data;
+    }
+
+    public List<DynamicRuleResponse> getData() {
+        return data;
     }
 }

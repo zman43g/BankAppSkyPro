@@ -23,8 +23,12 @@ public class RecommendationsRepository {
     private final Cache<String, BigDecimal> transactionSumCache;
     private final Cache<String, Integer> transactionCountCache;
 
+
+
     public RecommendationsRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+        log.info("✅ Подключение к БД: успешно");
+        showAllTables();
 
         // Инициализация кэшей
         this.userOfCache = Caffeine.newBuilder()
@@ -281,7 +285,7 @@ public class RecommendationsRepository {
     }
 
     private void checkTables() {
-        String[] tables = {"users", "products", "transactions"};
+        String[] tables = {"USERS", "products", "transactions"};
         for (String table : tables) {
             try {
                 Long count = jdbcTemplate.queryForObject(
@@ -334,5 +338,45 @@ public class RecommendationsRepository {
         transactionSumCache.invalidateAll();
         transactionCountCache.invalidateAll();
         log.info("Все кэши очищены");
+    }
+
+    private void showAllTables() {
+        try {
+            log.info("=== ВСЕ ТАБЛИЦЫ В БАЗЕ ДАННЫХ ===");
+
+            // Способ 1: через INFORMATION_SCHEMA
+            List<String> tables = jdbcTemplate.queryForList(
+                    "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES " +
+                            "WHERE TABLE_SCHEMA NOT IN ('INFORMATION_SCHEMA', 'SYSTEM_LOBS') " +
+                            "ORDER BY TABLE_NAME",
+                    String.class
+            );
+
+            if (tables.isEmpty()) {
+                log.info("❌ В базе данных НЕТ таблиц!");
+                log.info("База данных пуста. Нужно создать таблицы или использовать другую базу.");
+            } else {
+                log.info("✅ Найдено таблиц: {}", tables.size());
+                for (String table : tables) {
+                    log.info("  📁 {}", table);
+
+                    // Покажем несколько колонок
+                    try {
+                        List<String> columns = jdbcTemplate.queryForList(
+                                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS " +
+                                        "WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION",
+                                String.class,
+                                table
+                        );
+                        log.info("    Колонки: {}", String.join(", ", columns));
+                    } catch (Exception e) {
+                        log.info("    Не удалось получить колонки");
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("❌ Ошибка при получении таблиц: {}", e.getMessage());
+        }
     }
 }
