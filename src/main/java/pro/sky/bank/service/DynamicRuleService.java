@@ -20,6 +20,19 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Сервис для управления бизнес-правилами системы.
+ * Предоставляет методы для создания, получения и удаления динамических правил,
+ * которые используются для автоматизации бизнес-логики (кредитование, инвестиции и т.д.).
+ * <p>
+ * Все операции гарантируют целостность данных и валидацию входных параметров.
+ * При возникновении ошибок выбрасываются соответствующие исключения.
+ *
+ * @see DynamicRuleRequest
+ * @see DynamicRuleResponse
+ * @see RuleNotFoundException
+ * @see RuleValidationException
+ */
 @Service
 @RequiredArgsConstructor
 public class DynamicRuleService {
@@ -28,9 +41,20 @@ public class DynamicRuleService {
     private final RuleQueryRepository ruleQueryRepository;
     private final ObjectMapper objectMapper;
     private final RuleStatisticService statisticService;
-
+    /**
+     * Основной метод для создания нового динамического правила.
+     * Выполняет полный цикл создания: валидация входящего запроса, сохранение основного правила,
+     * преобразование и сохранение вложенных запросов (RuleQuery), инициализацию счетчика статистики.
+     * Весь процесс выполняется в одной транзакции.
+     *
+     * @param request {@link DynamicRuleRequest} с данными для создания.
+     * @return {@link DynamicRuleResponse} представление созданного и сохраненного правила.
+     * @throws IllegalArgumentException при нарушении условий валидации (см. {@link #validateRuleRequest}).
+     * @see #validateRuleRequest(DynamicRuleRequest)
+     */
     @Transactional
     public DynamicRuleResponse createRule(DynamicRuleRequest request) {
+
         validateRuleRequest(request);
 
         DynamicRule rule = new DynamicRule();
@@ -47,29 +71,45 @@ public class DynamicRuleService {
         ruleQueryRepository.saveAll(queryEntities);
         savedRule.setQueries(queryEntities);
 
-        // Инициализируем статистику для нового правила
         statisticService.incrementTrigger(savedRule.getProductId(), savedRule.getProductName());
 
         System.out.println("Created dynamic rule for product: " + request.getProductName());
 
         return convertToResponse(savedRule);
     }
-
+    /**
+     * Удаляет правило и всю связанную с ним информацию.
+     * <p>
+     * Процесс включает валидацию productId, поиск правила, деактивацию его статистики в
+     * {@link RuleStatisticService}, а также каскадное удаление всех связанных сущностей RuleQuery.
+     * Выполняется в транзакции.
+     * </p>
+     *
+     * @param productId идентификатор продукта (UUID) правила, подлежащего удалению.
+     * @throws RuleNotFoundException если правило не найдено.
+     * @throws RuleValidationException если productId некорректен.
+     * @see #validateProductId(String)
+     * @see #findRuleByProductIdOrThrow(String)
+     */
     @Transactional
     public void deleteRule(String productId) {
         validateProductId(productId);
         DynamicRule rule = findRuleByProductIdOrThrow(productId);
 
-        // Деактивируем статистику перед удалением правила
         statisticService.deactivateStatistic(productId);
 
         // Удаляем запросы и правило
         deleteRuleAndQueries(rule);
     }
-
+    /**
+     * Возвращает список всех динамических правил, существующих в системе.
+     * Для каждого правила загружаются и конвертируются в DTO все связанные запросы (RuleQuery).
+     * Метод работает в режиме "только для чтения" ({@code readOnly = true}).
+     * @return Список {@link DynamicRuleResponse}. Если правил нет, возвращается пустой список.
+     */
     @Transactional(readOnly = true)
     public List<DynamicRuleResponse> getAllRules() {
-        return dynamicRuleRepository.findAll().stream()
+            return dynamicRuleRepository.findAll().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -97,13 +137,20 @@ public class DynamicRuleService {
                         "Rule not found for productId: " + productId));
     }
 
-
+    /**
+     * Проверяет существование динамического правила по идентификатору продукта.
+     * Нужен для предотвращения дублирования или проверки перед операциями.
+     *
+     * @param productId идентификатор продукта (UUID) для проверки.
+     * @return {@code true} если правило с таким productId существует, {@code false} в противном случае.
+     */
     @Transactional(readOnly = true)
-    public boolean ruleExists(String productId) { // Изменили с UUID на String
+    public boolean ruleExists(String productId) {
         return dynamicRuleRepository.existsByProductId(productId);
     }
 
     private RuleQueryEntity createQueryEntity(DynamicRule rule, RuleQuery query) {
+
         RuleQueryEntity entity = new RuleQueryEntity();
         entity.setRule(rule);
         entity.setQueryType(query.getQuery());

@@ -19,7 +19,19 @@ public class RuleEvaluationService {
     private final RecommendationsRepository repository;
     private final RuleStatisticService statisticService;
     private final DynamicRuleService dynamicRuleService;
-
+    /**
+     * Выполняет оценку одного запроса ({@link RuleQuery}) в контексте конкретного пользователя.
+     * Это ключевой метод для проверки бизнес-условий. Помимо вычисления результата, метод:
+     *   Учитывает флаг {@code negate} в запросе для инверсии результата.
+     *   Собирает статистику срабатывания через {@link RuleStatisticService}.
+     *   Обеспечивает логирование и обработку ошибок.
+     * Метод выполняется в транзакции.
+     *
+     * @param userId Уникальный идентификатор пользователя ({@link UUID}), для которого оценивается запрос.
+     * @param ruleQuery Объект {@link RuleQuery}, содержащий тип, аргументы и флаг отрицания оцениваемого условия.
+     * @return {@code true} если условие запроса выполняется (с учетом флага {@code negate}),
+     *         {@code false} в противном случае или в случае ошибки.
+     */
     @Transactional
     public boolean evaluateQuery(UUID userId, RuleQuery ruleQuery) {
 
@@ -31,7 +43,6 @@ public class RuleEvaluationService {
                 result = !result;
             }
 
-            // СОБИРАЕМ СТАТИСТИКУ
             collectStatistics(ruleQuery, result);
 
             log.info("Query evaluated: userId={}, query={}, result={}", userId, ruleQuery.getQuery(), result);
