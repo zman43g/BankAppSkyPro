@@ -32,7 +32,7 @@ public class Invest500Rule implements RecommendationRule {
         if (rule1 && rule2 && rule3) {
             Recommendation recommendation = new Recommendation("147f6a0f-3b91-413b-ab99-87f081d60d5a",
                     "Invest 500",
-                    "Индивидуальный инвестиционным счет"
+                    "индивидуальный инвестиционным счет"
             );
             return Optional.of(recommendation);
         }

@@ -2,6 +2,8 @@ package pro.sky.bank.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pro.sky.bank.model.dto.DynamicRuleRequest;
+import pro.sky.bank.model.dto.RuleQuery;
 import pro.sky.bank.model.entity.RuleStatistic;
 import pro.sky.bank.repository.RuleStatisticRepository;
 
@@ -9,7 +11,21 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+/**
+ * Сервис для сбора и управления статистикой срабатываний бизнес-правил.
+ * <p>
+ * Предоставляет механизмы для отслеживания частоты использования динамических правил.
+ * Статистика хранится в памяти (in-memory) и обновляется в реальном времени при оценке
+ * каждого {@link RuleQuery} в системе {@link RuleEvaluationService}.
+ * </p>
+ * <p>
+ * Этот сервис является ключевым для мониторинга активности правил и формирования аналитики,
+ * доступной через REST API (например, по пути {@code /rule/stats}).
+ * </p>
+ *
+ * @see DynamicRuleService#createRule(DynamicRuleRequest)
+ * @see DynamicRuleService#deleteRule(String)
+ */
 @Service
 @Transactional
 public class RuleStatisticService {
@@ -23,7 +39,19 @@ public class RuleStatisticService {
         this.dynamicRuleService = dynamicRuleService;
     }
 
-
+    /**
+     * Увеличивает счетчик срабатываний для правила с указанным идентификатором и названием.
+     * <p>
+     * Если статистика для данного {@code productId} не существует, она будет автоматически
+     * создана и инициализирована. Метод является потокобезопасным и предназначен для вызова
+     * из различных мест системы (создание правила, оценка запроса).
+     * </p>
+     *
+     * @param productId   уникальный идентификатор продукта/правила (UUID в строковом формате),
+     *                    для которого увеличивается счетчик. Не должен быть {@code null}.
+     * @param productName человеко-читаемое название правила, отображаемое в отчетах.
+     *                    Не должен быть {@code null}.
+     */
     public void incrementTrigger(String productId, String productName) {
         // Создаем или обновляем запись статистики
         RuleStatistic statistic = statisticRepository.findByProductId(productId)
@@ -43,7 +71,16 @@ public class RuleStatisticService {
         statisticRepository.incrementTriggerCount(productId, LocalDateTime.now());
     }
 
-
+    /**
+     * Деактивирует сбор статистики для указанного правила.
+     * <p>
+     * Вызывается при удалении правила через {@link DynamicRuleService#deleteRule(String)}.
+     * Деактивированная статистика перестает обновляться, но может быть сохранена для истории
+     * или окончательно удалена, в зависимости от реализации.
+     * </p>
+     *
+     * @param productId идентификатор продукта/правила, статистику которого нужно деактивировать.
+     */
     public void deactivateStatistic(String productId) {
         statisticRepository.deactivateByProductId(productId);
     }

@@ -17,7 +17,7 @@ public class HelpHandler {
     }
 
     public void sendUnknownCommand(Long chatId, TelegramLongPollingBot bot) {
-        send(chatId, " Неизвестная команда. Используйте /help", bot);
+        send(chatId, " Unknown command. USE /help", bot);
     }
 
     private void send(Long chatId, String text, TelegramLongPollingBot bot) {

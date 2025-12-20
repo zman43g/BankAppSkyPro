@@ -18,7 +18,7 @@ public class DatabaseChecker {
     @Bean
     public CommandLineRunner checkDatabaseConnection(DataSource dataSource, JdbcTemplate jdbcTemplate) {
         return args -> {
-            log.info("=== ПРОВЕРКА ПОДКЛЮЧЕНИЯ К БАЗЕ ДАННЫХ ===");
+            log.info("=== TESTING DATABASE CONNECTION ===");
 
             try {
 
@@ -45,7 +45,7 @@ public class DatabaseChecker {
     }
 
     private void checkTables(JdbcTemplate jdbcTemplate) {
-        log.info("\n=== ПРОВЕРКА ТАБЛИЦ ===");
+        log.info("\n=== CHECKING TABLES ===");
 
         String[] requiredTables = {"USERS", "PRODUCTS", "TRANSACTIONS"};
         for (String table : requiredTables) {
@@ -72,7 +72,7 @@ public class DatabaseChecker {
     }
 
     private void checkTestUsers(JdbcTemplate jdbcTemplate) {
-        log.info("\n=== ТЕСТОВЫЕ ПОЛЬЗОВАТЕЛИ ===");
+        log.info("\n=== TEST USERS ===");
 
         String[] testUserIds = {
                 "cd515076-5d8a-44be-930e-8d4fcb79f42d",

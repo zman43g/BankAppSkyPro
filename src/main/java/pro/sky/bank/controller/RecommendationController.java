@@ -19,6 +19,21 @@ public class RecommendationController {
         this.recommendationService = recommendationService;
     }
 
+    /**
+     * Предоставляет персонализированные рекомендации для указанного пользователя.
+     * <p>
+     * Рекомендации формируются на основе оценки как статических, так и динамических бизнес-правил,
+     * связанных с профилем и действиями пользователя в системе.
+     * </p>
+     *
+     * @param userId Строковый идентификатор пользователя, который должен быть корректным UUID.
+     * @return {@link ResponseEntity} с телом {@link RecommendationResponse}, содержащим список рекомендаций.
+     *         Возвращает статус 200 (OK) при успешном выполнении.
+     * @throws IllegalArgumentException если параметр {@code userId} не является валидной строкой UUID.
+     *         В этом случае возвращается статус 400 (Bad Request).
+     * @see RecommendationService#getRecommendations(UUID)
+     */
+
     @GetMapping("/{userId}")
     public ResponseEntity<RecommendationResponse> getRecommendations(@PathVariable String userId) {
         try {

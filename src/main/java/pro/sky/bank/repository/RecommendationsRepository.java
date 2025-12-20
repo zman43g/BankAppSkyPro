@@ -30,7 +30,6 @@ public class RecommendationsRepository {
         log.info("✅ Подключение к БД: успешно");
         showAllTables();
 
-        // Инициализация кэшей
         this.userOfCache = Caffeine.newBuilder()
                 .maximumSize(1000)
                 .expireAfterWrite(10, TimeUnit.MINUTES)
@@ -163,7 +162,6 @@ public class RecommendationsRepository {
     }
 
     public BigDecimal getTotalAmountByProductTypeAndTransactionType(UUID userId, String productType, String transactionType) {
-        // Используем кэшированную версию
         return getTransactionSumByProductTypeAndTransactionType(userId, productType, transactionType);
     }
 
@@ -342,7 +340,7 @@ public class RecommendationsRepository {
 
     private void showAllTables() {
         try {
-            log.info("=== ВСЕ ТАБЛИЦЫ В БАЗЕ ДАННЫХ ===");
+            log.info("=== ALL TABLES IN DATABASE ===");
 
             // Способ 1: через INFORMATION_SCHEMA
             List<String> tables = jdbcTemplate.queryForList(

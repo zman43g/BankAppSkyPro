@@ -23,7 +23,16 @@ public class RecommendationService {
     private final DynamicRuleService dynamicRuleService;
     private final RuleEvaluationService ruleEvaluationService;
 
-
+    /**
+     * Генерирует персонализированный список рекомендаций для пользователя.
+     * Алгоритм формирует итоговый список, объединяя результаты оценки двух типов правил:
+     *   Статические правила: На основе заранее определенных классов, реализующих {@link RecommendationRule}.
+     *   Динамические правила:На основе правил, управляемых через {@link DynamicRuleService} и оцениваемых {@link RuleEvaluationService}.
+     * Каждое правило, условие которого выполняется для данного пользователя, порождает одну рекомендацию.
+     *
+     * @param userId Уникальный идентификатор пользователя ({@link UUID}), для которого запрашиваются рекомендации.
+     * @return {@link RecommendationResponse}, содержащий идентификатор пользователя и список объектов {@link Recommendation}.
+     */
     public RecommendationResponse getRecommendations(UUID userId) {
         List<Recommendation> recommendations = new ArrayList<>();
 
